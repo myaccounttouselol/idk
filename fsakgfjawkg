@@ -1,0 +1,185 @@
+local plrs = game:GetService("Players")
+local repl = game:GetService("ReplicatedStorage")
+local threading = game:GetService("RunService")
+local input = game:GetService("UserInputService")
+local camera = workspace.CurrentCamera
+local me = plrs.LocalPlayer
+
+local target = nil
+
+local mouse = function()
+   if input.TouchEnabled then
+       local viewportSize = camera.ViewportSize
+       return Vector2.new(viewportSize.X/2, viewportSize.Y/2)
+   else
+       return input:GetMouseLocation()
+   end
+end
+
+local get_closet = function()
+   if not me or not me.Character then return end
+   
+   local closest_player = nil
+   local max_distance = math.huge
+   local mouse_pos = mouse()
+
+   for _, player in pairs(plrs:GetPlayers()) do
+       if player ~= me and player.Character and player.Character:FindFirstChild("Head") then
+           local screen_pos, on_screen = camera:WorldToViewportPoint(player.Character.Head.Position)
+           if on_screen then
+               local distance = (Vector2.new(screen_pos.X, screen_pos.Y) - mouse_pos).Magnitude
+               if distance < max_distance then
+                   max_distance = distance
+                   closest_player = player
+               end
+           end
+       end
+   end
+   
+   target = closest_player
+end
+
+me.Backpack.ChildAdded:Connect(function(child)
+   if child:IsA("Tool") then
+       child.Equipped:Connect(function()
+           child.Activated:Connect(function()
+               if target and target.Character and target.Character:FindFirstChild("Head") then
+                   local Headd = target.Character.Head
+                   local Root = me.Character:WaitForChild("HumanoidRootPart")
+                   
+                   local args = {
+                       [1] = "Shoot",
+                       [2] = {
+                           [1] = {
+                               [1] = {
+                                   ["Instance"] = Headd,
+                                   ["Normal"] = Root.CFrame.LookVector.unit,
+                                   ["Position"] = Root.Position 
+                               }
+                           },
+                           [2] = {
+                               [1] = {
+                                   ["thePart"] = Headd,
+                                   ["theOffset"] = CFrame.new(Root.CFrame.LookVector.unit * 0.5) 
+                               }
+                           },
+                           [3] = Root.Position + Root.CFrame.LookVector * 10, 
+                           [4] = Root.Position,
+                           [5] = os.clock() 
+                       }
+                   }
+                   repl.MainEvent:FireServer(unpack(args))
+               end
+           end)
+       end)
+   end
+end)
+
+for _, tool in pairs(me.Backpack:GetChildren()) do
+   if tool:IsA("Tool") then
+       tool.Equipped:Connect(function()
+           tool.Activated:Connect(function()
+               if target and target.Character and target.Character:FindFirstChild("Head") then
+                   local Headd = target.Character.Head
+                   local Root = me.Character:WaitForChild("HumanoidRootPart")
+                   
+                   local args = {
+                       [1] = "Shoot",
+                       [2] = {
+                           [1] = {
+                               [1] = {
+                                   ["Instance"] = Headd,
+                                   ["Normal"] = Root.CFrame.LookVector.unit,
+                                   ["Position"] = Root.Position 
+                               }
+                           },
+                           [2] = {
+                               [1] = {
+                                   ["thePart"] = Headd,
+                                   ["theOffset"] = CFrame.new(Root.CFrame.LookVector.unit * 0.5) 
+                               }
+                           },
+                           [3] = Root.Position + Root.CFrame.LookVector * 10, 
+                           [4] = Root.Position,
+                           [5] = os.clock() 
+                       }
+                   }
+                   repl.MainEvent:FireServer(unpack(args))
+               end
+           end)
+       end)
+   end
+end
+
+if me.Character then
+   local tool = me.Character:FindFirstChildOfClass("Tool")
+   if tool then
+       tool.Activated:Connect(function()
+           if target and target.Character and target.Character:FindFirstChild("Head") then
+               local Headd = target.Character.Head
+               local Root = me.Character:WaitForChild("HumanoidRootPart")
+               
+               local args = {
+                   [1] = "Shoot",
+                   [2] = {
+                       [1] = {
+                           [1] = {
+                               ["Instance"] = Headd,
+                               ["Normal"] = Root.CFrame.LookVector.unit,
+                               ["Position"] = Root.Position 
+                           }
+                       },
+                       [2] = {
+                           [1] = {
+                               ["thePart"] = Headd,
+                               ["theOffset"] = CFrame.new(Root.CFrame.LookVector.unit * 0.5) 
+                           }
+                       },
+                       [3] = Root.Position + Root.CFrame.LookVector * 10, 
+                       [4] = Root.Position,
+                       [5] = os.clock() 
+                   }
+               }
+               repl.MainEvent:FireServer(unpack(args))
+           end
+       end)
+   end
+end
+
+me.CharacterAdded:Connect(function(character)
+   character.ChildAdded:Connect(function(child)
+       if child:IsA("Tool") then
+           child.Activated:Connect(function()
+               if target and target.Character and target.Character:FindFirstChild("Head") then
+                   local Headd = target.Character.Head
+                   local Root = me.Character:WaitForChild("HumanoidRootPart")
+                   
+                   local args = {
+                       [1] = "Shoot",
+                       [2] = {
+                           [1] = {
+                               [1] = {
+                                   ["Instance"] = Headd,
+                                   ["Normal"] = Root.CFrame.LookVector.unit,
+                                   ["Position"] = Root.Position 
+                               }
+                           },
+                           [2] = {
+                               [1] = {
+                                   ["thePart"] = Headd,
+                                   ["theOffset"] = CFrame.new(Root.CFrame.LookVector.unit * 0.5) 
+                               }
+                           },
+                           [3] = Root.Position + Root.CFrame.LookVector * 10, 
+                           [4] = Root.Position,
+                           [5] = os.clock() 
+                       }
+                   }
+                   repl.MainEvent:FireServer(unpack(args))
+               end
+           end)
+       end
+   end)
+end)
+
+threading.RenderStepped:Connect(get_closet)
