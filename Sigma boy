@@ -1,0 +1,163 @@
+-- Services
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui") or Instance.new("PlayerGui", LocalPlayer)
+
+-- Generate 200 Sequential Keys (GG.LOCK001 - GG.LOCK200)
+local validKeys = {}
+for i = 1, 200 do
+    table.insert(validKeys, string.format("GG.LOCK%03d", i))
+end
+
+-- Additional Custom Keys
+local extraKeys = {
+    "GG.LOCKGA", "GG.LOCK01", "GG.LOCK22", "GG.LOCKGE",
+    "GG.LOCKA1", "GG.LOCKA2", "GG.LOCKB1", "GG.LOCKB2",
+    "GG.LOCKC1", "GG.LOCKC2", "GG.LOCKD1", "GG.LOCKD2",
+    "GG.LOCKE1", "GG.LOCKE2", "GG.LOCKF1", "GG.LOCKF2",
+    "GG.LOCKG1", "GG.LOCKG2", "GG.LOCKH1", "GG.LOCKH2",
+    "GG.LOCKI1", "GG.LOCKI2", "GG.LOCKJ1", "GG.LOCKJ2"
+}
+
+-- Add extra keys to validKeys list
+for _, key in ipairs(extraKeys) do
+    table.insert(validKeys, key)
+end
+
+-- UI Elements
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = PlayerGui
+ScreenGui.Name = "GG_LOCK_LOADER"
+ScreenGui.ResetOnSpawn = false
+
+-- Background Blur
+local BlurEffect = Instance.new("BlurEffect")
+BlurEffect.Size = 20
+BlurEffect.Parent = game.Lighting
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 350, 0, 200)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+-- UI Corner (Rounded Edges)
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 10)
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Text = "GG.LOCK"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 24
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Size = UDim2.new(1, 0, 0.2, 0)
+Title.BackgroundTransparency = 1
+Title.Parent = MainFrame
+
+-- Key Input Box
+local KeyBox = Instance.new("TextBox")
+KeyBox.PlaceholderText = "Enter Key Here"
+KeyBox.Font = Enum.Font.Gotham
+KeyBox.TextSize = 18
+KeyBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+KeyBox.Size = UDim2.new(0.8, 0, 0.3, 0)
+KeyBox.Position = UDim2.new(0.1, 0, 0.4, 0)
+KeyBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+KeyBox.Parent = MainFrame
+
+-- UI Corner for Input Box
+local KeyBoxCorner = Instance.new("UICorner", KeyBox)
+KeyBoxCorner.CornerRadius = UDim.new(0, 5)
+
+-- Submit Button
+local SubmitButton = Instance.new("TextButton")
+SubmitButton.Text = "Submit"
+SubmitButton.Font = Enum.Font.GothamBold
+SubmitButton.TextSize = 18
+SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitButton.Size = UDim2.new(0.8, 0, 0.3, 0)
+SubmitButton.Position = UDim2.new(0.1, 0, 0.7, 0)
+SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+SubmitButton.Parent = MainFrame
+
+-- UI Corner for Button
+local ButtonCorner = Instance.new("UICorner", SubmitButton)
+ButtonCorner.CornerRadius = UDim.new(0, 5)
+
+-- Function to check if a key is valid
+local function isValidKey(key)
+    for _, validKey in ipairs(validKeys) do
+        if key == validKey then
+            return true
+        end
+    end
+    return false
+end
+
+-- Tween Effects
+local fadeIn = TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.5, 0)})
+fadeIn:Play()
+
+-- Key Input System
+SubmitButton.MouseButton1Click:Connect(function()
+    local userInput = KeyBox.Text
+    if isValidKey(userInput) then
+        print("Key Accepted! Loading Script...")
+
+        -- Fade Out Animation
+        local fadeOut = TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(0.5, 0, 1.2, 0)})
+        fadeOut:Play()
+
+        fadeOut.Completed:Wait()
+        ScreenGui:Destroy()
+        BlurEffect:Destroy()
+
+        -- Load Silent Aim Script
+        getgenv().Silent = {
+            Settings = {
+                Toggled = true,
+                AimPart = "UpperTorso",
+                HitChance = 9999,
+                Prediction = {
+                    Toggled = true,
+                    Value = 0.13322,
+                    AutoPred = false,
+                    JumpOffset = 0.08,
+                    AntiGroundShots = true,
+                    Resolve = true,
+                },
+                Circle = {
+                    Visible = true,
+                    Transparency = 0.5,
+                    Thickness = 3,
+                    NumSides = 100,
+                    Radius = 120,
+                    Filled = false,
+                    Color = Color3.fromRGB(255, 255, 255), -- White Circle
+                    OutlineColor = Color3.fromRGB(0, 0, 0), -- Black Outline
+                },
+                RainbowTarget = false,
+                WallCheck = true,
+                AutoShoot = true,
+                BulletTp = false,
+                FriendCheck = true,
+            },
+        }
+
+        -- Load External Silent Aim Script
+        local silentAimUrl = "https://raw.githubusercontent.com/hi999999-max/silent-aim/refs/heads/main/Better-Silent-Aim"
+        loadstring(game:HttpGet(silentAimUrl, true))();
+
+    else
+        SubmitButton.Text = "Invalid Key!"
+        SubmitButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+        wait(1)
+        SubmitButton.Text = "Submit"
+        SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    end
+end)
