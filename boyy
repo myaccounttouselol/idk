@@ -1,0 +1,476 @@
+getgenv().Tsunami = {
+    ['Silent Aim'] = {
+        ["Enabled"] = true,
+        ["Part"] = "HumanoidRootPart",
+        ["Prediction"] = 0.12,
+        ['NearestPoint'] = true,
+        ["EnableJumpPart"] = false,
+        ["JumpPart"] = "Head",
+        ["Sync Camlock"] = true,
+        ["JumpOffset"] = -0.15,
+        ["FallOffset"] = 0,
+    },
+    ['FieldOfView'] = {
+        ["Visible"] = false,
+        ["Color"] = Color3.new(0, 0, 0),
+        ["Radius"] = 400,
+        ["Transparency"] = 1.1
+    },
+    ['AutoSilentPrediction'] = {
+        ["Enabled"] = false,
+        ["Amount_150"] = 0.163,
+        ["Amount_140"] = 0.132,
+        ["Amount_130"] = 0.172,
+        ["Amount_127"] = 0.127,
+        ["Amount_135"] = 0.135,
+        ["Amount_120"] = 0.133,
+        ["Amount_110"] = 0.184,
+        ["Amount_100"] = 0.145,
+        ["Amount_90"] = 0.149,
+        ["Amount_80"] = 0.139,
+        ["Amount_70"] = 0.154,
+        ["Amount_60"] = 0.196,
+        ["Amount_50"] = 0.1227
+    },
+    ['SpecificDis'] = {
+        ["Enabled"] = true,
+        ["Prediction"] = {
+            ["Close"] = 0.1252115416,
+            ["Mid"] = 0.1238915416,
+            ["Far"] = 0.1214915413}
+    },
+    ['Checks'] = {
+        ['WallCheck'] = false,
+        ['KOCheck'] = true,
+    },
+    ['Resolver'] = {
+        ["Enabled"] = true,
+    },
+    ['Camlock'] = {
+        ["Enabled"] = true,
+        ["Keybind"] = "C",
+        ["Prediction"] = 0.0982,
+        ["Part"] = "HumanoidRootPart",
+        ["EnableJumpPart"] = false,
+        ["JumpPart"] = "Head",
+        ["Easing"] = Enum.EasingStyle.Bounce,
+        ["EasingDirection"] = Enum.EasingDirection.InOut,
+        ["Smoothness"] = 0.088211,
+        ["FieldOfView"] = {
+            ["Visible"] = false,
+            ["Color"] = Color3.new(0, 0, 0),
+            ["Radius"] = 360,
+            ["Transparency"] = 1.1
+        }
+    },
+    ['Spin'] = {
+        ['Enabled'] = true,
+        ['Key'] = "V",
+        ['Speed'] = 2800,
+    }
+}
+
+
+local MainEvent = game:GetService("ReplicatedStorage"):WaitForChild("MainEvent")
+local BlockedEvents = {"CHECKER_1", "TeleportDetect", "OneMoreTime"}
+
+local originalNamecall
+
+
+originalNamecall = hookmetamethod(
+    game,
+    "namecall",
+    function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
+
+        -- Block specific FireServer calls to MainEvent
+        if self == MainEvent and method == "FireServer" and table.find(BlockedEvents, args[1]) then
+            return -- Prevent the event from firing
+        end
+
+        -- Neutralize crash functions if found
+        if not checkcaller() then
+            local environment = getfenv(2)
+            if environment and environment.crash then
+                hookfunction(environment.crash, function() end)
+            end
+        end
+
+        
+        return originalNamecall(self, ...)
+    end
+)
+
+
+warn("Bypass Loaded.")
+local players = game.Players
+local lp = players.LocalPlayer
+local rs = game:GetService("RunService")
+local p = getgenv().Tsunami
+local m = lp:GetMouse()
+local c = workspace.CurrentCamera
+local SilentTarget, CamlockTarget = nil
+local CamToggle = false
+
+local Circle = Drawing.new("Circle")
+local Circle2 = Drawing.new("Circle")
+
+getgenv().Tsunami_Connections = {}
+
+local renderSteppedConnection = rs.RenderStepped:Connect(function()
+    if p['FieldOfView'] and p['FieldOfView'].Visible then
+        Circle.Visible = p['FieldOfView'].Visible
+        Circle.Color = p['FieldOfView'].Color
+        Circle.Radius = p['FieldOfView'].Radius
+        Circle.Transparency = p['FieldOfView'].Transparency
+        Circle.Position = Vector2.new(m.X, m.Y + (game:GetService("GuiService"):GetGuiInset().Y))
+    else
+        Circle.Visible = false
+    end
+    
+    if p['Camlock'] and p['Camlock']['FieldOfView'] and p['Camlock']['FieldOfView'].Visible then
+        Circle2.Visible = p['Camlock']['FieldOfView'].Visible
+        Circle2.Color = p['Camlock']['FieldOfView'].Color
+        Circle2.Radius = p['Camlock']['FieldOfView'].Radius
+        Circle2.Transparency = p['Camlock']['FieldOfView'].Transparency
+        Circle2.Position = Vector2.new(m.X, m.Y + (game:GetService("GuiService"):GetGuiInset().Y))
+    else
+        Circle2.Visible = false
+    end
+end)
+
+table.insert(getgenv().Tsunami_Connections, renderSteppedConnection)
+
+local function Flags(Plr)
+    local Dead = nil
+    if Plr and Plr.Character and game.PlaceId == 2788229376 or 7213786345 or 16033173781 or 9825515356 and p.KOCheck then
+        if Plr.Character:FindFirstChild("BodyEffects") then
+            if Plr.Character.BodyEffects:FindFirstChild("K.O") then
+                Dead = Plr.Character.BodyEffects["K.O"].Value
+            elseif Plr.Character.BodyEffects:FindFirstChild("KO") then
+                Dead = Plr.Character.BodyEffects.KO.Value
+            end
+        end
+    end
+    return Dead
+end
+
+local function GetClosetsPlr()
+    local ClosestTarget = nil
+    local MaxDistance = math.huge
+
+    for _, index in pairs(players:GetPlayers()) do
+        if index.Name ~= lp.Name and index.Character and index.Character:FindFirstChild("HumanoidRootPart") then
+            local Position, OnScreen = c:WorldToScreenPoint(index.Character.HumanoidRootPart.Position)
+            local Distance = (Vector2.new(Position.X, Position.Y) - Vector2.new(m.X, m.Y)).Magnitude
+
+            if not OnScreen then
+                continue
+            end
+
+            if Circle.Radius > Distance and Distance < MaxDistance then
+                ClosestTarget = index
+                MaxDistance = Distance
+            end
+        end
+    end
+    return ClosestTarget
+end
+local function Camlock()
+    if CamlockTarget and CamlockTarget.Character and not Flags(CamlockTarget) then
+        if p.Camlock.EnableJumpPart then
+            local targetPos = CamlockTarget.Character[p.Camlock.JumpPart].Position + (CamlockTarget.Character[p.Camlock.JumpPart].Velocity * p.Camlock.Prediction)
+            if CamlockTarget.Character.Humanoid.FloorMaterial == Enum.Material.Air then
+                targetPos = targetPos + Vector3.new(0, p.Camlock.JumpOffset, 0)
+            else
+                targetPos = targetPos + Vector3.new(0, p.Camlock.FallOffset, 0)
+            end
+            local EndPosition = CFrame.new(c.CFrame.Position, targetPos)
+            c.CFrame = c.CFrame:Lerp(EndPosition, p.Camlock.Smoothness)
+        else
+            local targetPos = CamlockTarget.Character[p.Camlock.Part].Position + (CamlockTarget.Character[p.Camlock.Part].Velocity * p.Camlock.Prediction)
+            local EndPosition = CFrame.new(c.CFrame.Position, targetPos)
+            local t = tick()
+            local duration = 0.1
+            local elapsed = t - (t - duration)
+            local alpha = elapsed / duration
+            alpha = math.clamp(alpha, 0, 1)
+            if p.Camlock.EasingDirection == Enum.EasingDirection.In then
+                alpha = alpha ^ 2
+            elseif p.Camlock.EasingDirection == Enum.EasingDirection.Out then
+                alpha = 1 - (1 - alpha) ^ 2
+            elseif p.Camlock.EasingDirection == Enum.EasingDirection.InOut then
+                alpha = alpha < 0.5 and 2 * alpha ^ 2 or 1 - 2 * (1 - alpha) ^ 2
+            end
+            c.CFrame = c.CFrame:Lerp(EndPosition, alpha)
+        end
+    end
+end
+
+local function GetClosetsPlr2()
+    local ClosestTarget = nil
+    local MaxDistance = math.huge
+
+    for _, index in pairs(players:GetPlayers()) do
+        if index.Name ~= lp.Name and index.Character and index.Character:FindFirstChild("HumanoidRootPart") then
+            local Position, OnScreen = c:WorldToScreenPoint(index.Character.HumanoidRootPart.Position)
+            local Distance = (Vector2.new(Position.X, Position.Y) - Vector2.new(m.X, m.Y)).Magnitude
+
+            if not OnScreen then
+                continue
+            end
+
+            if Circle2.Radius > Distance and Distance < MaxDistance then
+                ClosestTarget = index
+                MaxDistance = Distance
+            end
+        end
+    end
+    return ClosestTarget
+end
+
+local renderSteppedSilentAimConnection = rs.RenderStepped:Connect(function()
+    if p['Silent Aim'].Enabled and not p['Silent Aim']['Sync Camlock'] then
+        SilentTarget = GetClosetsPlr()
+    end
+end)
+
+table.insert(getgenv().Tsunami_Connections, renderSteppedSilentAimConnection)
+
+local inputBeganConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, Processed)
+    if Processed then return end
+
+    if input.KeyCode == Enum.KeyCode[p.Camlock.Keybind] then
+        CamToggle = not CamToggle
+
+        if p['Silent Aim'].Enabled and p['Silent Aim']['Sync Camlock'] and p.Camlock.Enabled then
+            if CamToggle then
+                SilentTarget = GetClosetsPlr()
+                CamlockTarget = GetClosetsPlr2()
+            else
+                SilentTarget = nil
+                CamlockTarget = nil
+            end
+        end
+    end
+end)
+
+table.insert(getgenv().Tsunami_Connections, inputBeganConnection)
+
+local function args()
+    local arg = nil
+
+    if game.PlaceId == 2788229376 then
+        arg = "UpdateMousePosI2"
+    elseif game.PlaceId == 16033173781 then
+        arg = "UpdateMousePosI2"
+    elseif game.PlaceId == 7213786345 then
+        arg = "UpdateMousePosI2"
+     elseif game.PlaceId == 17723797487 then
+        arg = "UpdateMousePosI"
+    elseif game.PlaceId == 9825515356 then
+        arg = "MousePosUpdate"
+    else
+        arg = "MousePosUpdate"
+    end
+
+    return arg
+end
+
+local function Velocity(Plr, Part)
+    local VELLLL = Plr.Character[Part].Velocity
+    return VELLLL
+end
+
+local OldPart = p['Silent Aim'].Part
+local function SilentMain(index)
+    local Event = game.ReplicatedStorage:FindFirstChild("MainEvent")
+    local Arguements = args()
+    if index:IsA("Tool") then
+        local connection = index.Activated:Connect(function()
+            if SilentTarget and SilentTarget.Character and Event and not Flags(SilentTarget) then
+                if p['Silent Aim'].EnableJumpPart then
+                    local targetPos = SilentTarget.Character[p['Silent Aim'].JumpPart].Position + (SilentTarget.Character[p['Silent Aim'].JumpPart].Velocity * p['Silent Aim'].Prediction)
+                    if SilentTarget.Character.Humanoid.FloorMaterial == Enum.Material.Air then
+                        targetPos = targetPos + Vector3.new(0, p['Silent Aim'].JumpOffset, 0)
+                    else
+                        targetPos = targetPos + Vector3.new(0, p['Silent Aim'].FallOffset, 0)
+                    end
+                    Event:FireServer(Arguements, targetPos)
+                else
+                    local targetPos = SilentTarget.Character[p['Silent Aim'].Part].Position + (SilentTarget.Character[p['Silent Aim'].Part].Velocity * p['Silent Aim'].Prediction)
+                    Event:FireServer(Arguements, targetPos)
+                end
+            end
+        end)
+        table.insert(getgenv().Tsunami_Connections, connection)
+    end
+end
+
+local OldPart2 = p.Camlock.Part
+local function Camlock()
+    if CamlockTarget and CamlockTarget.Character and not Flags(CamlockTarget) then
+        if p.Camlock.EnableJumpPart then
+            local targetPos = CamlockTarget.Character[p.Camlock.JumpPart].Position + (CamlockTarget.Character[p.Camlock.JumpPart].Velocity * p.Camlock.Prediction)
+            if CamlockTarget.Character.Humanoid.FloorMaterial == Enum.Material.Air then
+                targetPos = targetPos + Vector3.new(0, p.Camlock.JumpOffset, 0)
+            else
+                targetPos = targetPos + Vector3.new(0, p.Camlock.FallOffset, 0)
+            end
+            local EndPosition = CFrame.new(c.CFrame.Position, targetPos)
+            c.CFrame = c.CFrame:Lerp(EndPosition, p.Camlock.Smoothness)
+        else
+            local targetPos = CamlockTarget.Character[p.Camlock.Part].Position + (CamlockTarget.Character[p.Camlock.Part].Velocity * p.Camlock.Prediction)
+            local EndPosition = CFrame.new(c.CFrame.Position, targetPos)
+            c.CFrame = c.CFrame:Lerp(EndPosition, p.Camlock.Smoothness)
+        end
+    end
+end
+
+local renderSteppedCamlockConnection = rs.RenderStepped:Connect(Camlock)
+
+table.insert(getgenv().Tsunami_Connections, renderSteppedCamlockConnection)
+
+local function onCharacterAdded(character)
+    character.ChildAdded:Connect(SilentMain)
+    for _, tool in pairs(character:GetChildren()) do
+        SilentMain(tool)
+    end
+end
+
+local characterAddedConnection = lp.CharacterAdded:Connect(onCharacterAdded)
+
+table.insert(getgenv().Tsunami_Connections, characterAddedConnection)
+
+if lp.Character then
+    onCharacterAdded(lp.Character)
+end
+if Tsunami['Spin']['Enabled'] == true then
+
+    local Players = game:GetService("Players")
+    local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+    local Camera = workspace.CurrentCamera
+    local Toggle = false
+    local RotationSpeed = Tsunami['Spin']['Speed']
+    local Keybind = Tsunami['Spin']['Key']
+
+    local function OnKeyPress(Input, GameProcessedEvent)
+        if Input.KeyCode == Enum.KeyCode[Tsunami['Spin']['Key']] and not GameProcessedEvent then 
+            Toggle = not Toggle
+        end
+    end
+
+    local inputBeganConnection = UserInputService.InputBegan:Connect(OnKeyPress)
+    table.insert(getgenv().Tsunami_Connections, inputBeganConnection)
+
+    local LastRenderTime = 0
+    local TotalRotation = 0
+
+    local function RotateCamera()
+        if Toggle then
+            local CurrentTime = tick()
+            local TimeDelta = math.min(CurrentTime - LastRenderTime, 0.01)
+            LastRenderTime = CurrentTime
+
+            local RotationAngle = RotationSpeed * TimeDelta
+            local Rotation = CFrame.fromAxisAngle(Vector3.new(0, 1, 0), math.rad(RotationAngle))
+            Camera.CFrame = Camera.CFrame * Rotation
+
+            TotalRotation = TotalRotation + RotationAngle
+            if TotalRotation >= 360 then 
+                Toggle = false
+                TotalRotation = 0
+            end
+        end
+    end
+
+    local renderSteppedConnection = RunService.RenderStepped:Connect(RotateCamera)
+    table.insert(getgenv().Tsunami_Connections, renderSteppedConnection)
+end
+
+print("Rambo & Bayonet & Sero Made This :))")
+
+if getgenv().Tsunami.AutoSilentPrediction.Enabled == true then
+    local function updatePrediction()
+        local pingvalue = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+        local split = string.split(pingvalue, "(")
+        local ping = tonumber(split[1])
+        if ping < 150 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_150
+        elseif ping < 140 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_140
+        elseif ping < 130 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_130
+        elseif ping < 120 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_120
+        elseif ping < 110 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_110
+        elseif ping < 100 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_100
+        elseif ping < 90 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_90
+        elseif ping < 80 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_80
+        elseif ping < 70 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_70
+        elseif ping < 60 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_60
+        elseif ping < 50 then
+            getgenv().Tsunami.Silent.Prediction = getgenv().Tsunami.AutoSilentPrediction.Amount_50
+        end
+    end
+
+    local renderSteppedConnection = game:GetService("RunService").RenderStepped:Connect(updatePrediction)
+    table.insert(getgenv().Tsunami_Connections, renderSteppedConnection)
+end
+
+if getgenv().Tsunami.Checks.WallCheck then
+    if c and SilentTarget and SilentTarget.Character and SilentTarget.Character.HumanoidRootPart then
+        local Origin = c.CFrame.p
+        local destination = SilentTarget.Character.HumanoidRootPart.Position
+        local direction = (destination - Origin).unit
+        local CheckRay = Ray.new(Origin, direction * (destination - Origin).magnitude)
+        local ignore = {c, lp.Character}
+        local Hit = workspace:FindPartOnRayWithIgnoreList(CheckRay, ignore)
+        table.insert(getgenv().Tsunami_Connections, Hit:Connect(function()
+        end))
+        return Hit == nil
+    else
+        return true
+    end
+else
+    return true
+end
+
+getgenv().Tsunami.Silent.NearestPoint = true
+local function getClosestBodyPartToMouse(player)
+    if not player or not player.Character then
+        return nil
+    end
+
+    local minDistance = math.huge
+    local closestBodyPart = nil
+    local mousePos = m.Position
+
+    local character = player.Character
+    for _, partName in pairs({"Head", "HumanoidRootPart", "Torso", "UpperTorso", "LowerTorso", "LeftLeg", "RightLeg", "LeftArm", "RightArm"}) do
+        local part = character:FindFirstChild(partName)
+        if part then
+            local screenPos, onScreen = c:WorldToScreenPoint(part.Position)
+            if onScreen then
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                if distance < minDistance then
+                    minDistance = distance
+                    closestBodyPart = part
+ 
+
+                        end
+                    end
+                
+            end
+        end
+    end
+
+table.insert(getgenv().Tsunami_Connections, taskConnection)
